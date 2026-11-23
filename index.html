@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Christmas Tree</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at top, #132238 0%, #070d17 100%);
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+    }
+
+    .scene {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    svg {
+      width: 100%;
+      max-width: 480px;
+      height: auto;
+      filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.65));
+      overflow: visible;
+    }
+
+    /* Twinkling animation */
+    @keyframes twinkle {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.35;
+        transform: scale(0.75);
+      }
+    }
+
+    .bulb {
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: fill 0.15s ease, opacity 0.15s ease;
+    }
+
+    .bulb.lit {
+      animation: twinkle var(--dur, 1.8s) infinite ease-in-out var(--delay, 0s);
+    }
+
+    .bulb.unlit {
+      fill: #1e293b !important;
+      opacity: 0.35;
+      filter: none !important;
+      animation: none;
+    }
+
+    /* Interactive Control Panel */
+    .controls {
+      width: 100%;
+      max-width: 440px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      padding: 18px 22px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .badge {
+      background: #dc2626;
+      color: #fff;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.85rem;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      background: #334155;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #facc15;
+      border: 3px solid #fef08a;
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+    }
+
+    .quick-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    button {
+      flex: 1;
+      padding: 7px 10px;
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+
+    button:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <svg id="tree-svg" viewBox="0 0 500 660" xmlns="http://w3.org">
+      <defs>
+        <!-- Glow filter for lit lights -->
+        <filter id="bulb-glow" x="-120%" y="-120%" width="340%" height="340%">
+          <feGaussianBlur stdDeviation="2.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        <!-- Star glow -->
+        <filter id="star-glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        <!-- Trunk gradient -->
+        <linearGradient id="trunk-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#3e2212" />
+          <stop offset="45%" stop-color="#6b3e23" />
+          <stop offset="100%" stop-color="#2b160a" />
+        </linearGradient>
+
+        <!-- Foliage gradients -->
+        <linearGradient id="foliage-dark" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#14532d" />
+          <stop offset="100%" stop-color="#052e16" />
+        </linearGradient>
+
+        <linearGradient id="foliage-light" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#22c55e" />
+          <stop offset="55%" stop-color="#15803d" />
+          <stop offset="100%" stop-color="#14532d" />
+        </linearGradient>
+      </defs>
+
+      <!-- Snow / Ground Base -->
+      <ellipse cx="250" cy="618" rx="195" ry="20" fill="#cbd5e1" opacity="0.18" />
+
+      <!-- Tree Trunk -->
+      <rect x="226" y="545" width="48" height="72" rx="4" fill="url(#trunk-grad)" />
+
+      <!-- Central Spine / Inner Foliage Core -->
+      <polygon points="250,75 110,555 390,555" fill="url(#foliage-dark)" />
+
+      <!-- Container for 7 Branches on Each Side -->
+      <g id="branches-layer"></g>
+
+      <!-- Garland Wire Layer -->
+      <path id="garland-wire" fill="none" stroke="#062011" stroke-width="2.2" opacity="0.75" />
+
+      <!-- Top Star -->
+      <g transform="translate(250, 62)" filter="url(#star-glow)">
+        <polygon
+          points="0,-28 8,-9 28,-9 12,4 18,23 0,11 -18,23 -12,4 -28,-9 -8,-9"
+          fill="#facc15"
+          stroke="#fef08a"
+          stroke-width="1.5"
+        />
+      </g>
+
+      <!-- Container for 500 Spiral Lights -->
+      <g id="lights-layer"></g>
+    </svg>
+
+    <!-- Interactive Control Widget -->
+    <div class="controls">
+      <div class="control-header">
+        <label for="light-slider">Lights Lit (Bottom to Top)</label>
+        <span class="badge"><span id="lit-count">500</span> / 500</span>
+      </div>
+      <input type="range" id="light-slider" min="0" max="500" value="500" />
+      <div class="quick-buttons">
+        <button type="button" data-val="0">All Off</button>
+        <button type="button" data-val="125">25%</button>
+        <button type="button" data-val="250">50%</button>
+        <button type="button" data-val="375">75%</button>
+        <button type="button" data-val="500">All 500 Lit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const svgNS = "http://w3.org";
+    const branchesLayer = document.getElementById("branches-layer");
+    const lightsLayer = document.getElementById("lights-layer");
+    const garlandWire = document.getElementById("garland-wire");
+    const slider = document.getElementById("light-slider");
+    const litCountLabel = document.getElementById("lit-count");
+
+    const TOTAL_BRANCHES_PER_SIDE = 7;
+    const TOTAL_LIGHTS = 500;
+    const CX = 250;
+
+    // 1. Build 7 unnumbered branches on each side (bottom to top)
+    // Branch index 0 is bottom-most, index 6 is top-most
+    for (let i = 0; i < TOTAL_BRANCHES_PER_SIDE; i++) {
+      const progress = i / (TOTAL_BRANCHES_PER_SIDE - 1); // 0 (bottom) to 1 (top)
+      const baseY = 548 - progress * 415;
+      const tipY = baseY + 24 - progress * 10;
+      const topAttachY = baseY - (68 - progress * 24);
+      const spanX = 195 - progress * 135;
+
+      // Left Branch
+      const leftBranch = document.createElementNS(svgNS, "path");
+      const leftD = `
+        M ${CX} ${topAttachY}
+        Q ${CX - spanX * 0.55} ${baseY - 12}, ${CX - spanX} ${tipY}
+        Q ${CX - spanX * 0.5} ${baseY + 18}, ${CX} ${baseY + 8}
+        Z
+      `;
+      leftBranch.setAttribute("d", leftD);
+      leftBranch.setAttribute("fill", "url(#foliage-light)");
+      leftBranch.setAttribute("stroke", "#052e16");
+      leftBranch.setAttribute("stroke-width", "1.5");
+      branchesLayer.appendChild(leftBranch);
+
+      // Right Branch
+      const rightBranch = document.createElementNS(svgNS, "path");
+      const rightD = `
+        M ${CX} ${topAttachY}
+        Q ${CX + spanX * 0.55} ${baseY - 12}, ${CX + spanX} ${tipY}
+        Q ${CX + spanX * 0.5} ${baseY + 18}, ${CX} ${baseY + 8}
+        Z
+      `;
+      rightBranch.setAttribute("d", rightD);
+      rightBranch.setAttribute("fill", "url(#foliage-light)");
+      rightBranch.setAttribute("stroke", "#052e16");
+      rightBranch.setAttribute("stroke-width", "1.5");
+      branchesLayer.appendChild(rightBranch);
+    }
+
+    // 2. Generate 500 multicoloured lights spiralling from bottom base to top
+    const palette = [
+      "#ff3b30", // Red
+      "#ffcc00", // Warm Gold
+      "#34c759", // Emerald Green
+      "#00c7be", // Cyan
+      "#3b82f6", // Royal Blue
+      "#d946ef", // Magenta
+      "#ff9500"  // Tangerine
+    ];
+
+    const bulbs = [];
+    const wirePoints = [];
+    const bottomY = 552;
+    const topY = 82;
+    const turns = 8.5; // Number of spiral wraps from bottom to top
+
+    for (let i = 0; i < TOTAL_LIGHTS; i++) {
+      const t = i / (TOTAL_LIGHTS - 1); // 0 = very bottom, 1 = very top
+
+      // Non-linear height distribution so lights pack naturally around the wider bottom
+      const heightProgress = 1 - Math.pow(1 - t, 1.32);
+      const y = bottomY - heightProgress * (bottomY - topY);
+
+      // Tree radius at current height + slight natural sag per spiral wrap
+      const maxRadiusAtHeight = (1 - heightProgress) * 182 + 6;
+      const angle = t * turns * Math.PI * 2;
+      const sag = Math.abs(Math.sin(angle)) * 6 * (1 - heightProgress * 0.6);
+
+      const x = CX + Math.cos(angle) * maxRadiusAtHeight;
+      const finalY = y + sag;
+
+      // Determine whether bulb is on front or back side of the spiral
+      const isFront = Math.sin(angle) >= -0.15;
+
